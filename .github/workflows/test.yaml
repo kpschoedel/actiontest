@@ -88,14 +88,14 @@ jobs:
                 STRATEGY_CONTEXT: ${{ toJson(strategy) }}
               run: |
                 echo -e "Dump strategy context"
-                echo -e "$STRATEGY_CONTEXT\n" | /tmp/contexts/strategy
+                echo -e "$STRATEGY_CONTEXT\n" | tee /tmp/contexts/strategy
               shell: bash
             - name: Dump matrix context
               env:
                 MATRIX_CONTEXT: ${{ toJson(matrix) }}
               run: |
                 echo -e "Dump matrix context"
-                echo -e "$MATRIX_CONTEXT\n" | /tmp/contexts/matrix
+                echo -e "$MATRIX_CONTEXT\n" | tee /tmp/contexts/matrix
               shell: bash
 
             - name: Uploading artifact
