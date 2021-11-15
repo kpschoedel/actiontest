@@ -56,7 +56,7 @@ jobs:
                 then
                   BASE=$GH_EVENT_PARENT
                 else
-                  BASE="$(git --no-pager log -1 --pretty=tformat:%s | sed -e 's/Merge [0-9a-f]\+ into //')
+                  BASE="$(git --no-pager log -1 --pretty=tformat:%s | sed -e 's/Merge [0-9a-f]\+ into //')"
                 fi
                 echo "GH_EVENT_BASE=$BASE" >>$GITHUB_ENV
 
