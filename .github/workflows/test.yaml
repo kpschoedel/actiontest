@@ -1,0 +1,107 @@
+# Copyright (c) 2020 Project CHIP Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Build example
+
+on:
+    push:
+    pull_request:
+
+concurrency:
+    group: ${{ github.ref }}-${{ github.workflow }}-${{ (github.event_name == 'pull_request' && github.event.number) || (github.event_name == 'workflow_dispatch' && github.run_number) || github.sha }}
+    cancel-in-progress: true
+
+jobs:
+    telink:
+        name: Test
+        env:
+            GH_EVENT_PR: ${{ github.event_name == 'pull_request' && github.event.number || 0 }}
+            GH_EVENT_HASH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+            GH_EVENT_PARENT: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: set A1
+              run: |
+                echo "A1=$(date)" >>$GITHUB_ENV
+
+            - name: Checkout
+              uses: actions/checkout@v2
+              with:
+                  submodules: true
+
+            - name: Report checkout
+              run: |
+                mkdir -p /tmp/contexts
+                echo -e "Report checkout"
+                git log --oneline | tee /tmp/contexts/git
+              shell: bash
+
+            - name: Dump Env vars
+              run: |
+                mkdir -p /tmp/contexts
+                echo -e "Dump Env vars"
+                echo -e "$(env|sort)\n" | tee /tmp/contexts/env
+              shell: bash
+            - name: Dump runner context
+              env:
+                RUNNER_CONTEXT: ${{ toJson(runner) }}
+              run: |
+                echo -e "Dump runner context"
+                echo -e "$RUNNER_CONTEXT\n" | tee /tmp/contexts/runner
+              shell: bash
+            - name: Dump GitHub context
+              env:
+                GITHUB_CONTEXT: ${{ toJson(github) }}
+              run: |
+                echo -e "Dump GitHub context"
+                echo -e "$GITHUB_CONTEXT\n" | tee /tmp/contexts/github
+              shell: bash
+            - name: Dump job context
+              env:
+                JOB_CONTEXT: ${{ toJson(job) }}
+              run: |
+                echo -e "Dump job context"
+                echo -e "$JOB_CONTEXT\n" | tee /tmp/contexts/job
+              shell: bash
+            - name: Dump steps context
+              env:
+                STEPS_CONTEXT: ${{ toJson(steps) }}
+              run: |
+                echo -e "Dump steps context"
+                echo -e "$STEPS_CONTEXT\n" | tee /tmp/contexts/steps
+              shell: bash
+            - name: Dump strategy context
+              env:
+                STRATEGY_CONTEXT: ${{ toJson(strategy) }}
+              run: |
+                echo -e "Dump strategy context"
+                echo -e "$STRATEGY_CONTEXT\n" | /tmp/contexts/strategy
+              shell: bash
+            - name: Dump matrix context
+              env:
+                MATRIX_CONTEXT: ${{ toJson(matrix) }}
+              run: |
+                echo -e "Dump matrix context"
+                echo -e "$MATRIX_CONTEXT\n" | /tmp/contexts/matrix
+              shell: bash
+
+            - name: Uploading artifact
+              uses: actions/upload-artifact@v2
+              if: ${{ !env.ACT }}
+              with:
+                  name: Contexts,${{ env.GH_EVENT_PR }},${{ env.GH_EVENT_HASH }},${{ env.GH_EVENT_PARENT }}
+                  path: |
+                      /tmp/contexts
