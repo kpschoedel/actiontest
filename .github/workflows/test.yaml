@@ -51,7 +51,6 @@ jobs:
                 if [[ -z "${MERGE_PARENT}" || "${GH_EVENT_PR}" == 0 ]]
                 then
                   MERGE_PARENT=$GH_EVENT_BASE
-                else
                 fi
                 echo "GH_EVENT_PARENT=$MERGE_PARENT" >>$GITHUB_ENV
 
