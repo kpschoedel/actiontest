@@ -23,20 +23,16 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
-    telink:
+    testparent:
         name: Test
         env:
             GH_EVENT_PR: ${{ github.event_name == 'pull_request' && github.event.number || 0 }}
             GH_EVENT_HASH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-            GH_EVENT_PARENT: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+            GH_EVENT_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
         runs-on: ubuntu-latest
 
         steps:
-            - name: set A1
-              run: |
-                echo "A1=$(date)" >>$GITHUB_ENV
-
             - name: Checkout
               uses: actions/checkout@v2
               with:
@@ -48,66 +44,58 @@ jobs:
                 echo -e "Report checkout"
                 git log --oneline | tee /tmp/contexts/git
                 git --no-pager log -1 --pretty=tformat:%s | tee -a /tmp/contexts/git
-              shell: bash
 
-            - name: set A2
+            - name: Get parent for size reports
               run: |
-                if [[ ${GH_EVENT_PR} == 0 ]]
+                MERGE_PARENT="$(git --no-pager log -1 --pretty=tformat:%s | sed -n -e 's/Merge [0-9a-f]\+ into //p')"
+                if [[ -z "${MERGE_PARENT}" || "${GH_EVENT_PR}" == 0 ]]
                 then
-                  BASE=$GH_EVENT_PARENT
+                  MERGE_PARENT=$GH_EVENT_BASE
                 else
-                  BASE="$(git --no-pager log -1 --pretty=tformat:%s | sed -e 's/Merge [0-9a-f]\+ into //')"
                 fi
-                echo "GH_EVENT_BASE=$BASE" >>$GITHUB_ENV
+                echo "GH_EVENT_PARENT=$MERGE_PARENT" >>$GITHUB_ENV
 
             - name: Dump Env vars
               run: |
                 mkdir -p /tmp/contexts
                 echo -e "Dump Env vars"
                 echo -e "$(env|sort)\n" | tee /tmp/contexts/env
-              shell: bash
             - name: Dump runner context
               env:
                 RUNNER_CONTEXT: ${{ toJson(runner) }}
               run: |
                 echo -e "Dump runner context"
                 echo -e "$RUNNER_CONTEXT\n" | tee /tmp/contexts/runner
-              shell: bash
             - name: Dump GitHub context
               env:
                 GITHUB_CONTEXT: ${{ toJson(github) }}
               run: |
                 echo -e "Dump GitHub context"
                 echo -e "$GITHUB_CONTEXT\n" | tee /tmp/contexts/github
-              shell: bash
             - name: Dump job context
               env:
                 JOB_CONTEXT: ${{ toJson(job) }}
               run: |
                 echo -e "Dump job context"
                 echo -e "$JOB_CONTEXT\n" | tee /tmp/contexts/job
-              shell: bash
             - name: Dump steps context
               env:
                 STEPS_CONTEXT: ${{ toJson(steps) }}
               run: |
                 echo -e "Dump steps context"
                 echo -e "$STEPS_CONTEXT\n" | tee /tmp/contexts/steps
-              shell: bash
             - name: Dump strategy context
               env:
                 STRATEGY_CONTEXT: ${{ toJson(strategy) }}
               run: |
                 echo -e "Dump strategy context"
                 echo -e "$STRATEGY_CONTEXT\n" | tee /tmp/contexts/strategy
-              shell: bash
             - name: Dump matrix context
               env:
                 MATRIX_CONTEXT: ${{ toJson(matrix) }}
               run: |
                 echo -e "Dump matrix context"
                 echo -e "$MATRIX_CONTEXT\n" | tee /tmp/contexts/matrix
-              shell: bash
 
             - name: Uploading artifact
               uses: actions/upload-artifact@v2
