@@ -25,10 +25,6 @@ concurrency:
 jobs:
     testparent:
         name: Test
-        env:
-            GH_EVENT_PR: ${{ github.event_name == 'pull_request' && github.event.number || 0 }}
-            GH_EVENT_HASH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-            GH_EVENT_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
         runs-on: ubuntu-latest
 
@@ -45,20 +41,25 @@ jobs:
                 git log --oneline | tee /tmp/contexts/git
                 git --no-pager log -1 --pretty=tformat:%s | tee -a /tmp/contexts/git
 
-            - name: Get parent for size reports
-              run: |
-                MERGE_PARENT="$(git --no-pager log -1 --pretty=tformat:%s | sed -n -e 's/Merge [0-9a-f]\+ into //p')"
-                if [[ -z "${MERGE_PARENT}" || "${GH_EVENT_PR}" == 0 ]]
-                then
-                  MERGE_PARENT=$GH_EVENT_BASE
-                fi
-                echo "GH_EVENT_PARENT=$MERGE_PARENT" >>$GITHUB_ENV
+            - name: Environment for size reports
+              env:
+                  GH_EVENT_PR: ${{ github.event_name == 'pull_request' && github.event.number || 0 }}
+                  GH_EVENT_HASH: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+                  GH_EVENT_BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+              run: ./gh_size_env.sh
 
-            - name: Dump Env vars
+            - name: Dump Env vars 1
               run: |
                 mkdir -p /tmp/contexts
                 echo -e "Dump Env vars"
-                echo -e "$(env|sort)\n" | tee /tmp/contexts/env
+                cat "$GITHUB_ENV" | tee /tmp/contexts/env1
+
+            - name: Dump Env vars 2
+              run: |
+                mkdir -p /tmp/contexts
+                echo -e "Dump Env vars"
+                env | sort | tee /tmp/contexts/env2
+
             - name: Dump runner context
               env:
                 RUNNER_CONTEXT: ${{ toJson(runner) }}
